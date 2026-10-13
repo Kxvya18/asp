@@ -41,6 +41,7 @@ with record() as rec:
 rec.actions()       # ['dynamodb:PutItem', 's3:GetObject']
 rec.policy()        # dict
 rec.save("policy.json")
+rec.terraform()     # the same policy as a Terraform resource
 
 # as a decorator
 @record(save_to="policy.json")
@@ -52,6 +53,7 @@ def nightly_job():
 Early (v0.1). Policies list the right **actions**, with `"Resource": "*"`.
 
 Roadmap:
+- [x] Terraform output (`rec.terraform()`)
 - [ ] exact IAM names for services whose API names differ from their IAM names
 - [ ] restrict `Resource` to the exact buckets / tables / queues used
 - [ ] `check` mode: compare an existing policy with what the code really needs

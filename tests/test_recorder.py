@@ -88,3 +88,13 @@ def test_decorator_saves_policy(tmp_path):
 
     job()
     assert json.loads(out.read_text())["Statement"][0]["Action"] == ["s3:ListBuckets"]
+
+
+def test_terraform_output_contains_the_same_policy():
+    with record() as rec:
+        boto3.client("s3").list_buckets()
+    tf = rec.terraform(policy_name="nightly-job")
+    assert tf.startswith('resource "aws_iam_policy" "asp" {')
+    assert 'name   = "nightly-job"' in tf
+    inside = tf.split("<<POLICY\n")[1].split("\nPOLICY")[0]
+    assert json.loads(inside) == rec.policy()
