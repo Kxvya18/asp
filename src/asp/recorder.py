@@ -16,6 +16,7 @@ from pathlib import Path
 from botocore.client import BaseClient
 
 from asp.check import CheckResult, check
+from asp.explain import explain
 from asp.mappings import iam_actions
 from asp.resources import resources
 
@@ -118,6 +119,10 @@ class Recorder(ContextDecorator):
 
     def save(self, path: str | Path) -> None:
         Path(path).write_text(self.policy_json() + "\n")
+
+    def explain(self) -> str:
+        """The policy in plain English (written by code, not an LLM)."""
+        return explain(self.policy())
 
     def check(self, existing_policy: dict | str | Path) -> CheckResult:
         """Compare a policy the role already has with what was recorded (see check.py)."""

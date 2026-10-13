@@ -21,6 +21,9 @@ Issues = "https://github.com/Kxvya18/asp/issues"
 
 [dependency-groups]
 dev = ["pytest>=8", "moto[s3,dynamodb,sqs]>=5", "ruff>=0.5"]
+examples = [
+    "anthropic>=1.13.0",
+]
 
 [build-system]
 requires = ["hatchling"]
