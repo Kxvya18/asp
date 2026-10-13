@@ -75,8 +75,9 @@ def test_nested_recorders_both_see_inner_calls():
         s3.list_buckets()
         with record() as inner:
             s3.head_bucket(Bucket="demo")
-    assert outer.actions() == ["s3:HeadBucket", "s3:ListBuckets"]
-    assert inner.actions() == ["s3:HeadBucket"]
+    # real IAM names: ListBuckets needs ListAllMyBuckets, HeadBucket needs ListBucket
+    assert outer.actions() == ["s3:ListAllMyBuckets", "s3:ListBucket"]
+    assert inner.actions() == ["s3:ListBucket"]
 
 
 def test_decorator_saves_policy(tmp_path):
@@ -87,7 +88,7 @@ def test_decorator_saves_policy(tmp_path):
         boto3.client("s3").list_buckets()
 
     job()
-    assert json.loads(out.read_text())["Statement"][0]["Action"] == ["s3:ListBuckets"]
+    assert json.loads(out.read_text())["Statement"][0]["Action"] == ["s3:ListAllMyBuckets"]
 
 
 def test_terraform_output_contains_the_same_policy():

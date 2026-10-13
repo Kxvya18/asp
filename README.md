@@ -49,12 +49,18 @@ def nightly_job():
     ...
 ```
 
+## Correct permission names
+Python call names aren't always permission names: `list_objects_v2` needs `s3:ListBucket`,
+`copy_object` needs `s3:GetObject` + `s3:PutObject`, CloudWatch calls need `cloudwatch:*`,
+Bedrock's `Converse` needs `bedrock:InvokeModel`. These exceptions live in one readable table,
+[`mappings.py`](src/asp/mappings.py). Found a missing one? Add a row and a test.
+
 ## Status
 Early (v0.1). Policies list the right **actions**, with `"Resource": "*"`.
 
 Roadmap:
 - [x] Terraform output (`rec.terraform()`)
-- [ ] exact IAM names for services whose API names differ from their IAM names
+- [x] exact IAM names where API and IAM names differ (`src/asp/mappings.py`, contributions welcome)
 - [ ] restrict `Resource` to the exact buckets / tables / queues used
 - [ ] `check` mode: compare an existing policy with what the code really needs
 - [ ] AI-agent example and optional plain-English explanation of a policy
