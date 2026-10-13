@@ -13,4 +13,4 @@ from asp.check import CheckResult, check
 from asp.recorder import Call, Recorder, record
 
 __all__ = ["Call", "CheckResult", "Recorder", "check", "record"]
-__version__ = "0.1.0"
+__version__ = "0.1.1"

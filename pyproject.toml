@@ -1,6 +1,6 @@
 [project]
 name = "asp-iam"
-version = "0.1.0"
+version = "0.1.1"
 description = "Agent Scoped Permissions: record the AWS calls your code (or AI agent) makes and get the least-privilege IAM policy"
 readme = "README.md"
 license = "MIT"
