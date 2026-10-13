@@ -38,3 +38,6 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
+
+[project.entry-points.pytest11]
+asp = "asp.pytest_plugin"
