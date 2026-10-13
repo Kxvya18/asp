@@ -57,6 +57,22 @@ Python call names aren't always permission names: `list_objects_v2` needs `s3:Li
 Bedrock's `Converse` needs `bedrock:InvokeModel`. These exceptions live in one readable table,
 [`mappings.py`](src/asp/mappings.py). Found a missing one? Add a row and a test.
 
+## Check an existing policy
+```python
+result = rec.check("role_policy.json")   # dict, JSON text or a file path
+print(result.summary())
+```
+```
+missing (code would fail): 0
+unused (can be removed): 2
+  - dynamodb:Scan
+  - iam:CreateUser
+too broad (wildcards): 1
+  - s3:*
+```
+`result.ok` is False when the code needs something the policy doesn't allow, which is handy in CI.
+This first version compares actions, not resources.
+
 ## Status
 Early (v0.x). Policies name the exact actions and, for the services above, the exact resources.
 Other services keep `"Resource": "*"`. `rec.policy(scope_resources=False)` gives the old all-`*` form.
@@ -65,7 +81,7 @@ Roadmap:
 - [x] Terraform output (`rec.terraform()`)
 - [x] exact IAM names where API and IAM names differ (`src/asp/mappings.py`, contributions welcome)
 - [x] restrict `Resource` to the exact S3 buckets, DynamoDB tables (and indexes), SQS queues, SNS topics, Lambda functions used
-- [ ] `check` mode: compare an existing policy with what the code really needs
+- [x] `check` mode: compare an existing policy with what the code really needs (actions)
 - [ ] AI-agent example and optional plain-English explanation of a policy
 - [ ] pytest plugin: `pytest --asp` produces the policy your test suite needs
 

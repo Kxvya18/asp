@@ -15,6 +15,7 @@ from pathlib import Path
 
 from botocore.client import BaseClient
 
+from asp.check import CheckResult, check
 from asp.mappings import iam_actions
 from asp.resources import resources
 
@@ -117,6 +118,10 @@ class Recorder(ContextDecorator):
 
     def save(self, path: str | Path) -> None:
         Path(path).write_text(self.policy_json() + "\n")
+
+    def check(self, existing_policy: dict | str | Path) -> CheckResult:
+        """Compare a policy the role already has with what was recorded (see check.py)."""
+        return check(existing_policy, self.actions())
 
     def terraform(self, policy_name: str = "asp-recorded") -> str:
         """The policy as a Terraform resource, ready to put in a .tf file."""
