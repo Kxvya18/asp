@@ -77,6 +77,15 @@ python examples/ai_agent.py --claude   # real Claude drives the agent (pip insta
 `rec.explain()` produces the plain-English summary with ordinary code, not an LLM, so it is
 always exactly what the policy says.
 
+## From your test suite (pytest plugin)
+```bash
+pytest --asp                    # writes asp-policy.json: the permissions your tests needed
+pytest --asp-check role.json    # fails the run if the code needs actions role.json doesn't allow
+```
+Put `--asp-check` in CI and a change that suddenly needs a new AWS permission is caught before
+it fails in production. Only calls made inside test bodies are recorded: put setup (like creating
+fake buckets with moto) in fixtures so it stays out of the policy.
+
 ## Check an existing policy
 ```python
 result = rec.check("role_policy.json")   # dict, JSON text or a file path
@@ -103,7 +112,7 @@ Roadmap:
 - [x] restrict `Resource` to the exact S3 buckets, DynamoDB tables (and indexes), SQS queues, SNS topics, Lambda functions used
 - [x] `check` mode: compare an existing policy with what the code really needs (actions)
 - [x] AI-agent example and plain-English `explain()`
-- [ ] pytest plugin: `pytest --asp` produces the policy your test suite needs
+- [x] pytest plugin: `pytest --asp` / `pytest --asp-check role.json`
 
 ## License
 MIT
