@@ -1,5 +1,10 @@
 # asp: Agent Scoped Permissions
 
+[![ci](https://github.com/Kxvya18/asp/actions/workflows/ci.yml/badge.svg)](https://github.com/Kxvya18/asp/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/asp-iam)](https://pypi.org/project/asp-iam/)
+[![Python](https://img.shields.io/pypi/pyversions/asp-iam)](https://pypi.org/project/asp-iam/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 Record the AWS calls your Python code, or your **AI agent**, actually makes, and get the
 **least-privilege IAM policy** for it.
 
@@ -113,6 +118,11 @@ Roadmap:
 - [x] `check` mode: compare an existing policy with what the code really needs (actions)
 - [x] AI-agent example and plain-English `explain()`
 - [x] pytest plugin: `pytest --asp` / `pytest --asp-check role.json`
+
+## Contributing
+Found an AWS call that gets the wrong permission name? Add one row to
+[`mappings.py`](src/asp/mappings.py) plus a test, and open a PR. Issues labelled
+**good first issue** are a good place to start.
 
 ## License
 MIT
