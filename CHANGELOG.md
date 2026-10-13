@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.1
 
 Fixes from external testing (both made policies too small, so code failed with AccessDenied):
 - presigned URLs and presigned upload forms are now recorded (#17)
