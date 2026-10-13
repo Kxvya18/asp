@@ -57,6 +57,26 @@ Python call names aren't always permission names: `list_objects_v2` needs `s3:Li
 Bedrock's `Converse` needs `bedrock:InvokeModel`. These exceptions live in one readable table,
 [`mappings.py`](src/asp/mappings.py). Found a missing one? Add a row and a test.
 
+## AI agents: give them only what they use
+[`examples/ai_agent.py`](examples/ai_agent.py) gives an agent three AWS tools (list, read, write
+files) and the task *"summarise the October report and save it to the archive"*. Recorded with asp:
+
+```
+The agent needed only this:
+- read files in bucket 'reports'
+- list files in bucket 'reports'
+- write files in bucket 'archive'
+```
+Instead of broad S3 access "to be safe", the agent gets exactly this. If it is ever misled (for
+example by instructions hidden in a file it reads), it cannot delete data or touch other buckets.
+
+```bash
+python examples/ai_agent.py            # scripted stand-in, no API key, fake AWS
+python examples/ai_agent.py --claude   # real Claude drives the agent (pip install anthropic)
+```
+`rec.explain()` produces the plain-English summary with ordinary code, not an LLM, so it is
+always exactly what the policy says.
+
 ## Check an existing policy
 ```python
 result = rec.check("role_policy.json")   # dict, JSON text or a file path
@@ -82,7 +102,7 @@ Roadmap:
 - [x] exact IAM names where API and IAM names differ (`src/asp/mappings.py`, contributions welcome)
 - [x] restrict `Resource` to the exact S3 buckets, DynamoDB tables (and indexes), SQS queues, SNS topics, Lambda functions used
 - [x] `check` mode: compare an existing policy with what the code really needs (actions)
-- [ ] AI-agent example and optional plain-English explanation of a policy
+- [x] AI-agent example and plain-English `explain()`
 - [ ] pytest plugin: `pytest --asp` produces the policy your test suite needs
 
 ## License
