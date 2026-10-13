@@ -15,6 +15,8 @@ from pathlib import Path
 
 from botocore.client import BaseClient
 
+from asp.mappings import iam_actions
+
 _original_make_api_call = BaseClient._make_api_call
 _active: list[Recorder] = []  # recorders currently recording (they can be nested)
 _lock = threading.Lock()
@@ -30,8 +32,9 @@ class Call:
     params: dict = field(default_factory=dict, compare=False, hash=False)
 
     @property
-    def action(self) -> str:
-        return f"{self.service}:{self.operation}"
+    def iam_actions(self) -> list[str]:
+        """The IAM actions AWS checks for this call (see mappings.py)."""
+        return iam_actions(self.service, self.operation, self.params)
 
 
 def _recording_make_api_call(client, operation_name, api_params):
@@ -76,7 +79,7 @@ class Recorder(ContextDecorator):
 
     def actions(self) -> list[str]:
         """The distinct IAM actions used, sorted."""
-        return sorted({c.action for c in self.calls})
+        return sorted({action for c in self.calls for action in c.iam_actions})
 
     def policy(self) -> dict:
         """An IAM policy that allows exactly the recorded actions."""
