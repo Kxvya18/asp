@@ -91,6 +91,17 @@ class Recorder(ContextDecorator):
     def save(self, path: str | Path) -> None:
         Path(path).write_text(self.policy_json() + "\n")
 
+    def terraform(self, policy_name: str = "asp-recorded") -> str:
+        """The policy as a Terraform resource, ready to put in a .tf file."""
+        return (
+            'resource "aws_iam_policy" "asp" {\n'
+            f'  name   = "{policy_name}"\n'
+            "  policy = <<POLICY\n"
+            f"{self.policy_json()}\n"
+            "POLICY\n"
+            "}\n"
+        )
+
 
 def record(save_to: str | Path | None = None) -> Recorder:
     """Start recording AWS calls. See Recorder."""

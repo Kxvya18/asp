@@ -19,3 +19,16 @@ jobs:
       - run: uv sync
       - run: uv run ruff check .
       - run: uv run pytest -q
+
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: hashicorp/setup-terraform@v3
+      - run: uv sync
+      - name: Generate a policy as Terraform
+        run: uv run python examples/terraform_output.py
+      - name: Terraform says the file is valid
+        working-directory: examples/out
+        run: terraform init -backend=false && terraform validate
