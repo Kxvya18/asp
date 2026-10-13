@@ -38,6 +38,10 @@ def resources(action: str, params: dict, region: str | None) -> list[str]:
         return _sns(params, region)
     if service == "lambda":
         return _lambda(params, region)
+    if service == "iam" and name == "PassRole":
+        return [params["RoleArn"]] if params.get("RoleArn") else ["*"]
+    if service == "kms":
+        return _kms(params, region)
     return ["*"]
 
 
@@ -101,3 +105,12 @@ def _lambda(params, region):
     if name.startswith("arn:"):
         return [name]
     return [f"arn:aws:lambda:{region}:*:function:{name}"]
+
+
+def _kms(params, region):
+    key = params.get("KeyId")
+    if not key or key.startswith("alias/"):  # an alias does not name the key itself
+        return ["*"]
+    if key.startswith("arn:"):
+        return [key]
+    return [f"arn:aws:kms:{region}:*:key/{key}"]

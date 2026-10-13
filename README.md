@@ -91,6 +91,14 @@ Put `--asp-check` in CI and a change that suddenly needs a new AWS permission is
 it fails in production. Only calls made inside test bodies are recorded: put setup (like creating
 fake buckets with moto) in fixtures so it stays out of the policy.
 
+## Permissions AWS checks behind the scenes
+Some permissions never appear as calls of their own. asp adds them:
+- **KMS**: uploading or downloading an S3 object encrypted with a KMS key also needs the key
+  (`kms:GenerateDataKey` / `kms:Decrypt`), including buckets with default encryption
+- **iam:PassRole**: handing a role to a service (a Lambda's role, an ECS task role, ...)
+- **presigned URLs**: a download link needs `s3:GetObject`, an upload form `s3:PutObject`,
+  because whoever uses the link acts with your permissions
+
 ## Check an existing policy
 ```python
 result = rec.check("role_policy.json")   # dict, JSON text or a file path
