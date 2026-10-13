@@ -16,6 +16,7 @@ from pathlib import Path
 from botocore.client import BaseClient
 
 from asp.mappings import iam_actions
+from asp.resources import resources
 
 _original_make_api_call = BaseClient._make_api_call
 _active: list[Recorder] = []  # recorders currently recording (they can be nested)
@@ -81,15 +82,38 @@ class Recorder(ContextDecorator):
         """The distinct IAM actions used, sorted."""
         return sorted({action for c in self.calls for action in c.iam_actions})
 
-    def policy(self) -> dict:
-        """An IAM policy that allows exactly the recorded actions."""
-        return {
-            "Version": "2012-10-17",
-            "Statement": [{"Effect": "Allow", "Action": self.actions(), "Resource": "*"}],
-        }
+    def policy(self, scope_resources: bool = True) -> dict:
+        """An IAM policy that allows exactly the recorded actions.
 
-    def policy_json(self) -> str:
-        return json.dumps(self.policy(), indent=2)
+        scope_resources: name the exact buckets / tables / queues used instead of "*".
+        Actions that need the same resources share one statement."""
+        if not scope_resources:
+            statements = [{"Effect": "Allow", "Action": self.actions(), "Resource": "*"}]
+            return {"Version": "2012-10-17", "Statement": statements}
+
+        needs: dict[str, set[str]] = {}  # action -> resources it was used on
+        for call in self.calls:
+            for action in call.iam_actions:
+                needs.setdefault(action, set()).update(resources(action, call.params, call.region))
+        for action, arns in needs.items():
+            if "*" in arns:  # used on "anything" at least once
+                needs[action] = {"*"}
+
+        groups: dict[tuple[str, ...], list[str]] = {}  # resources -> actions
+        for action, arns in sorted(needs.items()):
+            groups.setdefault(tuple(sorted(arns)), []).append(action)
+        statements = [
+            {
+                "Effect": "Allow",
+                "Action": actions,
+                "Resource": arns[0] if len(arns) == 1 else list(arns),
+            }
+            for arns, actions in sorted(groups.items(), key=lambda g: g[1])
+        ]
+        return {"Version": "2012-10-17", "Statement": statements}
+
+    def policy_json(self, scope_resources: bool = True) -> str:
+        return json.dumps(self.policy(scope_resources), indent=2)
 
     def save(self, path: str | Path) -> None:
         Path(path).write_text(self.policy_json() + "\n")

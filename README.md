@@ -16,10 +16,12 @@ print(rec.policy_json())
 {
   "Version": "2012-10-17",
   "Statement": [
-    {"Effect": "Allow", "Action": ["s3:GetObject", "s3:PutObject"], "Resource": "*"}
+    {"Effect": "Allow", "Action": ["s3:GetObject"], "Resource": "arn:aws:s3:::reports/*"},
+    {"Effect": "Allow", "Action": ["s3:PutObject"], "Resource": "arn:aws:s3:::archive/*"}
   ]
 }
 ```
+It only reads from `reports` and only writes to `archive`, because that's all the code did.
 
 ## Why
 AI agents and scripts are often given broad AWS permissions because nobody knows what they
@@ -56,12 +58,13 @@ Bedrock's `Converse` needs `bedrock:InvokeModel`. These exceptions live in one r
 [`mappings.py`](src/asp/mappings.py). Found a missing one? Add a row and a test.
 
 ## Status
-Early (v0.1). Policies list the right **actions**, with `"Resource": "*"`.
+Early (v0.x). Policies name the exact actions and, for the services above, the exact resources.
+Other services keep `"Resource": "*"`. `rec.policy(scope_resources=False)` gives the old all-`*` form.
 
 Roadmap:
 - [x] Terraform output (`rec.terraform()`)
 - [x] exact IAM names where API and IAM names differ (`src/asp/mappings.py`, contributions welcome)
-- [ ] restrict `Resource` to the exact buckets / tables / queues used
+- [x] restrict `Resource` to the exact S3 buckets, DynamoDB tables (and indexes), SQS queues, SNS topics, Lambda functions used
 - [ ] `check` mode: compare an existing policy with what the code really needs
 - [ ] AI-agent example and optional plain-English explanation of a policy
 - [ ] pytest plugin: `pytest --asp` produces the policy your test suite needs
