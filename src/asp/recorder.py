@@ -17,10 +17,12 @@ from botocore.client import BaseClient
 
 from asp.check import CheckResult, check
 from asp.explain import explain
+from asp.implicit import implied
 from asp.mappings import iam_actions
 from asp.resources import resources
 
 _original_make_api_call = BaseClient._make_api_call
+_original_emit_api_params = BaseClient._emit_api_params
 _active: list[Recorder] = []  # recorders currently recording (they can be nested)
 _lock = threading.Lock()
 
@@ -40,6 +42,11 @@ class Call:
         return iam_actions(self.service, self.operation, self.params)
 
 
+def _record(call: Call) -> None:
+    for recorder in list(_active):
+        recorder.calls.append(call)
+
+
 def _recording_make_api_call(client, operation_name, api_params):
     call = Call(
         service=client.meta.service_model.signing_name,
@@ -47,10 +54,38 @@ def _recording_make_api_call(client, operation_name, api_params):
         region=client.meta.region_name,
         params=dict(api_params),
     )
-    # recorded before sending: a call that fails still needed the permission
-    for recorder in list(_active):
-        recorder.calls.append(call)
-    return _original_make_api_call(client, operation_name, api_params)
+    _record(call)  # recorded before sending: a call that fails still needed the permission
+    response = None
+    try:
+        response = _original_make_api_call(client, operation_name, api_params)
+        return response
+    finally:  # permissions AWS checks behind the scenes (KMS keys, iam:PassRole)
+        for service, operation, params in implied(
+            call.service,
+            call.operation,
+            call.params,
+            response if isinstance(response, dict) else None,
+        ):
+            _record(Call(service, operation, call.region, params))
+
+
+def _recording_emit_api_params(client, api_params, operation_model, context):
+    """Presigned URLs make no API call, but whoever uses the URL acts with the signer's
+    permissions, so record them as if the call was made."""
+    if context.get("is_presign_request"):
+        operation = operation_model.name
+        # generate_presigned_post is built on the CreateBucket model; it is an upload form
+        if operation == "CreateBucket" and set(api_params) == {"Bucket"}:
+            operation = "PutObject"
+        _record(
+            Call(
+                client.meta.service_model.signing_name,
+                operation,
+                client.meta.region_name,
+                dict(api_params),
+            )
+        )
+    return _original_emit_api_params(client, api_params, operation_model, context)
 
 
 class Recorder(ContextDecorator):
@@ -68,6 +103,7 @@ class Recorder(ContextDecorator):
         with _lock:
             if not _active:
                 BaseClient._make_api_call = _recording_make_api_call
+                BaseClient._emit_api_params = _recording_emit_api_params
             _active.append(self)
         return self
 
@@ -76,6 +112,7 @@ class Recorder(ContextDecorator):
             _active.remove(self)
             if not _active:
                 BaseClient._make_api_call = _original_make_api_call
+                BaseClient._emit_api_params = _original_emit_api_params
         if self.save_to:
             self.save(self.save_to)
         return False  # never hide an exception from the recorded code

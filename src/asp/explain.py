@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-# action -> what it lets you do (add rows for more actions)
+# action -> what it lets you do (add rows for more actions); "{where}" places the resource
 PHRASES = {
     "s3:GetObject": "read files",
     "s3:PutObject": "write files",
@@ -21,6 +21,9 @@ PHRASES = {
     "sns:Publish": "publish notifications",
     "lambda:InvokeFunction": "run function",
     "bedrock:InvokeModel": "call AI models",
+    "kms:GenerateDataKey": "encrypt data with {where}",
+    "kms:Decrypt": "decrypt data with {where}",
+    "iam:PassRole": "pass {where} to an AWS service",
 }
 
 
@@ -40,6 +43,10 @@ def describe_resource(arn: str) -> str:
         return f"queue '{arn.rsplit(':', 1)[1]}'"
     if arn.startswith("arn:aws:sns:"):
         return f"topic '{arn.rsplit(':', 1)[1]}'"
+    if ":key/" in arn:
+        return f"KMS key '{arn.split(':key/')[1]}'"
+    if ":role/" in arn:
+        return f"role '{arn.split(':role/')[1]}'"
     if ":function:" in arn:
         return f"function '{arn.split(':function:')[1]}'"
     return arn
@@ -53,5 +60,8 @@ def explain(policy: dict) -> str:
         arns = st["Resource"] if isinstance(st["Resource"], list) else [st["Resource"]]
         where = ", ".join(describe_resource(a) for a in arns)
         for action in actions:
-            lines.append(f"- {PHRASES.get(action, action)} in {where}")
+            phrase = PHRASES.get(action, action)
+            if "{where}" not in phrase:  # most phrases read "<do something> in <resource>"
+                phrase += " in {where}"
+            lines.append("- " + phrase.format(where=where))
     return "\n".join(lines) or "- nothing"
