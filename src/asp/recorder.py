@@ -3,6 +3,10 @@
 How it works: every boto3 client sends its requests through one method,
 botocore's BaseClient._make_api_call. While a recorder is active we wrap that method,
 write down which service and operation were called, then let the call continue normally.
+
+The same wrapper also serves enforce mode (see enforce.py): while an enforcer is active,
+every call is checked against its policy before it is sent, and a disallowed call never
+leaves the process.
 """
 
 from __future__ import annotations
@@ -24,7 +28,22 @@ from asp.resources import resources
 _original_make_api_call = BaseClient._make_api_call
 _original_emit_api_params = BaseClient._emit_api_params
 _active: list[Recorder] = []  # recorders currently recording (they can be nested)
+_enforcers: list = []  # enforcers currently active (see enforce.py); they can be nested too
 _lock = threading.Lock()
+
+
+def _install() -> None:
+    """Wrap botocore while anything is recording or enforcing. Call with _lock held."""
+    if not _active and not _enforcers:
+        BaseClient._make_api_call = _recording_make_api_call
+        BaseClient._emit_api_params = _recording_emit_api_params
+
+
+def _uninstall() -> None:
+    """Put botocore back once nothing is recording or enforcing. Call with _lock held."""
+    if not _active and not _enforcers:
+        BaseClient._make_api_call = _original_make_api_call
+        BaseClient._emit_api_params = _original_emit_api_params
 
 
 @dataclass(frozen=True)
@@ -47,6 +66,13 @@ def _record(call: Call) -> None:
         recorder.calls.append(call)
 
 
+def _enforce(call: Call) -> None:
+    """Let every active enforcer inspect the call before it is sent. An enforcer in
+    "raise" mode stops a disallowed call by raising; nothing reaches AWS."""
+    for enforcer in list(_enforcers):
+        enforcer._inspect(call)
+
+
 def _recording_make_api_call(client, operation_name, api_params):
     call = Call(
         service=client.meta.service_model.signing_name,
@@ -55,6 +81,7 @@ def _recording_make_api_call(client, operation_name, api_params):
         params=dict(api_params),
     )
     _record(call)  # recorded before sending: a call that fails still needed the permission
+    _enforce(call)  # raises here, before sending, if an enforced policy does not allow it
     response = None
     try:
         response = _original_make_api_call(client, operation_name, api_params)
@@ -77,14 +104,14 @@ def _recording_emit_api_params(client, api_params, operation_model, context):
         # generate_presigned_post is built on the CreateBucket model; it is an upload form
         if operation == "CreateBucket" and set(api_params) == {"Bucket"}:
             operation = "PutObject"
-        _record(
-            Call(
-                client.meta.service_model.signing_name,
-                operation,
-                client.meta.region_name,
-                dict(api_params),
-            )
+        call = Call(
+            client.meta.service_model.signing_name,
+            operation,
+            client.meta.region_name,
+            dict(api_params),
         )
+        _record(call)
+        _enforce(call)  # a link that would let someone do a disallowed action is not made
     return _original_emit_api_params(client, api_params, operation_model, context)
 
 
@@ -101,18 +128,14 @@ class Recorder(ContextDecorator):
 
     def __enter__(self) -> Recorder:
         with _lock:
-            if not _active:
-                BaseClient._make_api_call = _recording_make_api_call
-                BaseClient._emit_api_params = _recording_emit_api_params
+            _install()
             _active.append(self)
         return self
 
     def __exit__(self, *exc) -> bool:
         with _lock:
             _active.remove(self)
-            if not _active:
-                BaseClient._make_api_call = _original_make_api_call
-                BaseClient._emit_api_params = _original_emit_api_params
+            _uninstall()
         if self.save_to:
             self.save(self.save_to)
         return False  # never hide an exception from the recorded code

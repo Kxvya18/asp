@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- `enforce(policy)`: block any AWS call the policy does not allow, before it is sent. Raises
+  `asp.AccessDenied` (a `ClientError` with code `AccessDenied`), or only logs with
+  `on_violation="log"`. Enforces actions and resources (down to S3 object keys), `Deny`,
+  `NotAction` / `NotResource`, wildcards, implicit `iam:PassRole` / KMS permissions and
+  presigned URLs. Accepts a policy dict, JSON text, a file, or a `Recorder`.
+- example: `examples/ai_agent.py --attack` shows a prompt injection stopped by `enforce()`
+
 ## 0.1.1
 
 Fixes from external testing (both made policies too small, so code failed with AccessDenied):
