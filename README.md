@@ -12,7 +12,7 @@ Record the AWS calls your Python code, or your **AI agent**, actually makes, and
 from asp import record
 
 with record() as rec:
-    run_my_script()            # or: agent.run("archive last month's reports")
+    run_my_script()  # or: agent.run("archive last month's reports")
 
 print(rec.policy_json())
 ```
@@ -45,15 +45,15 @@ from asp import record
 # as a block
 with record() as rec:
     ...
-rec.actions()       # ['dynamodb:PutItem', 's3:GetObject']
-rec.policy()        # dict
+rec.actions()  # ['dynamodb:PutItem', 's3:GetObject']
+rec.policy()  # dict
 rec.save("policy.json")
-rec.terraform()     # the same policy as a Terraform resource
+rec.terraform()  # the same policy as a Terraform resource
+
 
 # as a decorator
 @record(save_to="policy.json")
-def nightly_job():
-    ...
+def nightly_job(): ...
 ```
 
 ## Correct permission names
@@ -91,6 +91,29 @@ Put `--asp-check` in CI and a change that suddenly needs a new AWS permission is
 it fails in production. Only calls made inside test bodies are recorded: put setup (like creating
 fake buckets with moto) in fixtures so it stays out of the policy.
 
+## Any language: `asp serve` (Java, Go, Node...)
+`record()` watches boto3. For programs in other languages, run a recording AWS endpoint and point
+the program's AWS SDK at it. No code changes: the SDK reads `AWS_ENDPOINT_URL`.
+
+```bash
+pip install "asp-iam[serve]"
+asp serve                                    # fake AWS (moto) on http://localhost:5050, recording
+AWS_ENDPOINT_URL=http://localhost:5050 java -jar my-service.jar     # or mvn test, go test, npm test
+curl localhost:5050/_asp/policy              # the least-privilege policy
+```
+
+Open **http://localhost:5050/_asp/** to watch every call arrive, with the permission it needs and the
+policy building up live. `/_asp/terraform` gives the Terraform resource, and `POST /_asp/reset` forgets
+the calls (useful after creating test data). The endpoint only reads each signed request (service from
+the signature, operation from botocore's own API descriptions) and passes it on to moto, so the policy
+is the same one `record()` writes for the same calls. It is a test endpoint, not a proxy to real AWS.
+
+![asp live view recording a Java backend](examples/java-backend/asp-live.png)
+
+[`examples/java-backend`](examples/java-backend) is a small Java service (AWS SDK for Java v2, no asp code
+in it). `./run.sh` starts `asp serve`, calls the service's endpoints and prints its policy; CI runs it on
+every change.
+
 ## Permissions AWS checks behind the scenes
 Some permissions never appear as calls of their own. asp adds them:
 - **KMS**: uploading or downloading an S3 object encrypted with a KMS key also needs the key
@@ -101,7 +124,7 @@ Some permissions never appear as calls of their own. asp adds them:
 
 ## Check an existing policy
 ```python
-result = rec.check("role_policy.json")   # dict, JSON text or a file path
+result = rec.check("role_policy.json")  # dict, JSON text or a file path
 print(result.summary())
 ```
 ```

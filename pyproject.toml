@@ -22,13 +22,19 @@ classifiers = [
 ]
 dependencies = ["boto3>=1.26"]
 
+[project.optional-dependencies]
+serve = ["moto[server]>=5"]
+
+[project.scripts]
+asp = "asp.cli:main"
+
 [project.urls]
 Homepage = "https://github.com/Kxvya18/asp"
 Issues = "https://github.com/Kxvya18/asp/issues"
 Changelog = "https://github.com/Kxvya18/asp/blob/main/CHANGELOG.md"
 
 [dependency-groups]
-dev = ["pytest>=8", "moto[s3,dynamodb,sqs]>=5", "ruff>=0.5"]
+dev = ["pytest>=8", "moto[s3,dynamodb,sqs,server]>=5", "ruff>=0.5"]
 examples = [
     "anthropic>=1.13.0",
 ]
