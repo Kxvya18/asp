@@ -8,6 +8,12 @@
 - live web view at `/_asp/`: calls as they arrive, the permission each needs, the policy and its
   plain-English explanation; `/_asp/policy`, `/_asp/terraform`, `POST /_asp/reset`
 - example: a Java backend (AWS SDK for Java v2) recorded with no code changes, run in CI
+- `enforce(policy)`: block any AWS call the policy does not allow, before it is sent. Raises
+  `asp.AccessDenied` (a `ClientError` with code `AccessDenied`), or only logs with
+  `on_violation="log"`. Enforces actions and resources (down to S3 object keys), `Deny`,
+  `NotAction` / `NotResource`, wildcards, implicit `iam:PassRole` / KMS permissions and
+  presigned URLs. Accepts a policy dict, JSON text, a file, or a `Recorder`.
+- example: `examples/ai_agent.py --attack` shows a prompt injection stopped by `enforce()`
 
 ## 0.1.1
 
