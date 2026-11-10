@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- `asp serve`: a recording AWS endpoint for programs in any language (`pip install "asp-iam[serve]"`).
+  Point an AWS SDK at it with `AWS_ENDPOINT_URL`; it records each signed request, answers through moto,
+  and writes the same least-privilege policy as `record()`
+- live web view at `/_asp/`: calls as they arrive, the permission each needs, the policy and its
+  plain-English explanation; `/_asp/policy`, `/_asp/terraform`, `POST /_asp/reset`
+- example: a Java backend (AWS SDK for Java v2) recorded with no code changes, run in CI
 - `enforce(policy)`: block any AWS call the policy does not allow, before it is sent. Raises
   `asp.AccessDenied` (a `ClientError` with code `AccessDenied`), or only logs with
   `on_violation="log"`. Enforces actions and resources (down to S3 object keys), `Deny`,
